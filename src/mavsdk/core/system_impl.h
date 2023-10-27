@@ -180,11 +180,21 @@ public:
         bool extended = false);
 
     FlightMode get_flight_mode() const;
+    ardupilot::CopterMode get_coptermode_apm() const;
 
     MavlinkCommandSender::Result
     set_flight_mode(FlightMode mode, uint8_t component_id = MAV_COMP_ID_AUTOPILOT1);
+
     void set_flight_mode_async(
         FlightMode mode,
+        const CommandResultCallback& callback,
+        uint8_t component_id = MAV_COMP_ID_AUTOPILOT1);
+
+    MavlinkCommandSender::Result
+    set_coptermode_apm(ardupilot::CopterMode mode, uint8_t component_id = MAV_COMP_ID_AUTOPILOT1);
+    
+    void set_coptermode_apm_async(
+        ardupilot::CopterMode mode,
         const CommandResultCallback& callback,
         uint8_t component_id = MAV_COMP_ID_AUTOPILOT1);
 
@@ -323,6 +333,9 @@ private:
 
     std::pair<MavlinkCommandSender::Result, MavlinkCommandSender::CommandLong>
     make_command_ardupilot_mode(FlightMode flight_mode, uint8_t component_id);
+
+    std::pair<MavlinkCommandSender::Result, MavlinkCommandSender::CommandLong>
+    make_command_ardupilot_custom_coptermode(ardupilot::CopterMode custom_copter_mode, uint8_t component_id);
 
     static ardupilot::RoverMode flight_mode_to_ardupilot_rover_mode(FlightMode flight_mode);
     static ardupilot::CopterMode flight_mode_to_ardupilot_copter_mode(FlightMode flight_mode);

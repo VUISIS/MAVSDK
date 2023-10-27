@@ -830,6 +830,38 @@ void SystemImpl::set_flight_mode_async(
     send_command_async(result.second, callback);
 }
 
+
+MavlinkCommandSender::Result
+SystemImpl::set_coptermode_apm(ardupilot::CopterMode mode, uint8_t component_id) 
+{
+    std::pair<MavlinkCommandSender::Result, MavlinkCommandSender::CommandLong> result =
+        make_command_ardupilot_custom_coptermode(mode, component_id);
+
+    if (result.first != MavlinkCommandSender::Result::Success) {
+        return result.first;
+    }
+
+    return send_command(result.second);
+}
+
+void SystemImpl::set_coptermode_apm_async(
+        ardupilot::CopterMode mode,
+        const CommandResultCallback& callback,
+        uint8_t component_id) 
+{
+    std::pair<MavlinkCommandSender::Result, MavlinkCommandSender::CommandLong> result =
+        make_command_ardupilot_custom_coptermode(mode, component_id);
+
+    if (result.first != MavlinkCommandSender::Result::Success) {
+        if (callback) {
+            callback(result.first, NAN);
+        }
+        return;
+    }
+
+    send_command_async(result.second, callback);
+}
+
 std::pair<MavlinkCommandSender::Result, MavlinkCommandSender::CommandLong>
 SystemImpl::make_command_flight_mode(FlightMode flight_mode, uint8_t component_id)
 {
@@ -913,6 +945,45 @@ SystemImpl::make_command_ardupilot_mode(FlightMode flight_mode, uint8_t componen
 
     return std::make_pair<>(MavlinkCommandSender::Result::Success, command);
 }
+
+
+std::pair<MavlinkCommandSender::Result, MavlinkCommandSender::CommandLong>
+SystemImpl::make_command_ardupilot_custom_coptermode(ardupilot::CopterMode custom_copter_mode, uint8_t component_id) {
+    // TODO: Check if flag needs to be changed for different custom copter modes.
+    const uint8_t flag_safety_armed = is_armed() ? MAV_MODE_FLAG_SAFETY_ARMED : 0;
+    const uint8_t flag_hitl_enabled = _hitl_enabled ? MAV_MODE_FLAG_HIL_ENABLED : 0;
+    const uint8_t mode_type =
+        MAV_MODE_FLAG_CUSTOM_MODE_ENABLED | flag_safety_armed | flag_hitl_enabled;
+
+    MavlinkCommandSender::CommandLong command{};
+
+    command.command = MAV_CMD_DO_SET_MODE;
+    command.params.maybe_param1 = static_cast<float>(mode_type);
+    command.params.maybe_param2 = static_cast<float>(custom_copter_mode);
+
+    switch(custom_copter_mode) {
+        case ardupilot::CopterMode::Auto:
+            command.params.maybe_param2 = static_cast<float>(ardupilot::CopterMode::Auto);
+            break;
+        case ardupilot::CopterMode::Guided:
+            command.params.maybe_param2 = static_cast<float>(ardupilot::CopterMode::Guided);
+            break;
+        case ardupilot::CopterMode::AvoidAdbs:
+            command.params.maybe_param2 = static_cast<float>(ardupilot::CopterMode::AvoidAdbs);
+            break;
+        case ardupilot::CopterMode::EnhancedAvoidAdbs:
+            command.params.maybe_param2 = static_cast<float>(ardupilot::CopterMode::EnhancedAvoidAdbs);
+            break;
+        default:
+            LogErr() << "The Ardupilot flight mode is not supported";
+            MavlinkCommandSender::CommandLong empty_command{};
+            return std::make_pair<>(MavlinkCommandSender::Result::UnknownError, empty_command);
+    }
+
+    command.target_component_id = component_id;
+    return std::make_pair<>(MavlinkCommandSender::Result::Success, command);
+}
+
 ardupilot::RoverMode SystemImpl::flight_mode_to_ardupilot_rover_mode(FlightMode flight_mode)
 {
     switch (flight_mode) {
@@ -1072,6 +1143,14 @@ SystemImpl::make_command_px4_mode(FlightMode flight_mode, uint8_t component_id)
 FlightMode SystemImpl::get_flight_mode() const
 {
     return _flight_mode;
+}
+
+ardupilot::CopterMode SystemImpl::get_coptermode_apm() const
+{
+    // TODO: Set a variable for reading the specific APM flight mode.
+    // return ardupilot::CopterMode::Unknown;
+    ardupilot::CopterMode coptermode = flight_mode_to_ardupilot_copter_mode(_flight_mode);
+    return coptermode;
 }
 
 void SystemImpl::receive_float_param(
