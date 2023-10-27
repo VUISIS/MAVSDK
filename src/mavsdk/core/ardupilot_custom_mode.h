@@ -47,6 +47,7 @@ enum class CopterMode {
     AutoRotate = 26,
     AutoRtl = 27,
     Turtle = 28,
+    EnhancedAvoidAdbs = 99, // Create a new hybrid flight mode for Ardupilot 
     Unknown = 100
 };
 
